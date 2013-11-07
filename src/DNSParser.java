@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 
-public class PacketParser {
+public class DNSParser {
 	
 	// The values are assigned as hex, but their int value is decimal (normal integers).
 	
@@ -36,19 +36,15 @@ public class PacketParser {
 	static int UDP = 0;
 	static int ICMP_Ping_Request = 0;
 	static int ICMP_Ping_Reply = 0;
-	static int DHCP = 0;
+	
 	static int DNS = 0;
+	static int DNS_Transactions = 0;
+	
+	static ArrayList<Integer> transactionIDs = new ArrayList<Integer>();
 	
 	public static void printResults(){
-		System.out.println("total number of Ethernet (IP + ARP) packets = " + (IP + ARP));
-		System.out.println("total number of IP packets = " + IP);
-		System.out.println("total number of ARP packets = " + ARP);
-		System.out.println("total number of ICMP packets = " + ICMP);
-		System.out.println("total number of TCP packets = " + TCP);
-		System.out.println("total number of UDP packets = " + UDP);
-		System.out.println("total number of Ping packets = " + (ICMP_Ping_Request + ICMP_Ping_Reply) + " Request: " + ICMP_Ping_Request + " Reply: " + ICMP_Ping_Reply);
-		System.out.println("total number of DHCP packets = " + DHCP);
 		System.out.println("total number of DNS packets = " + DNS);
+		System.out.println("total number of DNS transactions = " + transactionIDs.size());
 	}
 	
 	// ----- First Layer: Ethernet  ---
@@ -57,20 +53,12 @@ public class PacketParser {
 		if (packet.size() < ETHERNET_FRAME_MIN_SIZE){
 			return;
 		}
-		
-		// Ethernet Frame: 6 bytes for dst Mac, 6 bytes for src Mac, then 2 bytes for EtherType:
+				
 		int type = packet.get(12) * 256 + packet.get(13);
-		
 		switch (type){
 			case TYPE_IPv4:
 				IP++;
 				processIPv4Packet(packet);
-				break;
-			case TYPE_IPv6:
-				// Not count it.
-				break;
-			case TYPE_ARP:
-				ARP++;
 				break;
 		}
 	}
@@ -78,36 +66,25 @@ public class PacketParser {
 	// --- Second Layer: Transport Layer ---
 	
 	public static void processIPv4Packet(ArrayList<Integer> packet){
-		// The protocol within IPv4 header:
 		int type = packet.get(23);
 		switch (type){
-			case TYPE_ICMP:
-				ICMP++;
-				processICMPPacket(packet);
-				break;
-			case TYPE_TCP:
-				TCP++;
-				processTCPPacket(packet);
-				break;
 			case TYPE_UDP:
 				UDP++;
 				processUDPPacket(packet);
 				break;
 		}
 	}
-	
-	public static void processICMPPacket(ArrayList<Integer> packet){
-		
+
+	// --- Third Layer: Application Layer ---
+
+	public static void processUDPPacket(ArrayList<Integer> packet){
 		int IHL = computeIPv4HeaderLength(packet);
-		int type = packet.get(OFFSET_IN_ETHERNET_FRAME + IHL * 4); // Should be 34 if the IP header is length 20
+		int baseIndex = OFFSET_IN_ETHERNET_FRAME + IHL * 4;
+		int sourcePortNumber = packet.get(baseIndex) * 256 + packet.get(baseIndex + 1); // 34 35
+		int destinationPortNumber = packet.get(baseIndex + 2) * 256 + packet.get(baseIndex + 3); // 36 37
 		
-		switch (type){
-			case TYPE_ICMP_PING_REQUEST:
-				ICMP_Ping_Request++;
-				break;
-			case TYPE_ICMP_PING_REPLY:
-				ICMP_Ping_Reply++;
-				break;
+		if (!findMatchedPortNumber(sourcePortNumber, IHL, packet)){
+			findMatchedPortNumber(destinationPortNumber, IHL, packet);
 		}
 	}
 	
@@ -118,44 +95,37 @@ public class PacketParser {
 		return (packet.get(OFFSET_IN_ETHERNET_FRAME) << 28) >> 28;		
 	}
 	
-	// --- Third Layer: Application Layer ---
-	
-	public static void processTCPPacket(ArrayList<Integer> packet){
-		int IHL = computeIPv4HeaderLength(packet);
-		int baseIndex = OFFSET_IN_ETHERNET_FRAME + IHL * 4;
-		int sourcePortNumber = packet.get(baseIndex) * 256 + packet.get(baseIndex + 1); // 34 35
-		int destinationPortNumber = packet.get(baseIndex + 2) * 256 + packet.get(baseIndex + 3); // 36 37
-		
-		if (!findMatchedPortNumber(sourcePortNumber)){
-			findMatchedPortNumber(destinationPortNumber);
-		}
+	// This function is not used.
+	public static int computeUDPHeaderLength(ArrayList<Integer> packet, int IHL){
+		int baseIndex = OFFSET_IN_ETHERNET_FRAME + IHL * 4 + 4;
+		return (packet.get(baseIndex) * 256 + packet.get(baseIndex + 1));
 	}
 	
-	public static void processUDPPacket(ArrayList<Integer> packet){
-		int IHL = computeIPv4HeaderLength(packet);
-		int baseIndex = OFFSET_IN_ETHERNET_FRAME + IHL * 4;
-		int sourcePortNumber = packet.get(baseIndex) * 256 + packet.get(baseIndex + 1); // 34 35
-		int destinationPortNumber = packet.get(baseIndex + 2) * 256 + packet.get(baseIndex + 3); // 36 37
-		
-		if (!findMatchedPortNumber(sourcePortNumber)){
-			findMatchedPortNumber(destinationPortNumber);
-		}
-	}
-	
-	public static boolean findMatchedPortNumber(int portNumber){
+	public static boolean findMatchedPortNumber(int portNumber, int IHL, ArrayList<Integer> packet){
 		switch (portNumber){
 			case PORT_DNS:
 				DNS++;
-				return true;
-			case PORT_DHCP_CLIENT:
-			case PORT_DHCP_SERVER:
-				DHCP++;
+				processDNSPacket(packet, IHL);
 				return true;
 			default:
 				return false;
 		}
 	}
 
+	public static void processDNSPacket(ArrayList<Integer> packet, int IHL){
+		// MAC + IP + UPD
+		int baseIndex = OFFSET_IN_ETHERNET_FRAME + IHL * 4 + 8;
+		int flags = packet.get(baseIndex + 2);
+		// Take the first bit:
+		int isResponse = (flags >> 7);
+		if (isResponse == 1){
+			int transactionID = packet.get(baseIndex) * 256 + packet.get(baseIndex + 1);
+			//if (!transactionIDs.contains(transactionID)){
+				transactionIDs.add(transactionID);
+			//}
+		}
+	}
+	
 	// Main Function:
 	
 	public static void main(String[] args) {
@@ -205,6 +175,7 @@ public class PacketParser {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
 		printResults();
 	}
 
