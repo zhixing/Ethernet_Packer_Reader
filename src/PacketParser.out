@@ -1,0 +1,9 @@
+total number of Ethernet (IP + ARP) packets = 4021
+total number of IP packets = 4011
+total number of ARP packets = 10
+total number of ICMP packets = 1098
+total number of TCP packets = 1645
+total number of UDP packets = 1262
+total number of Ping packets = 1097 Request: 560 Reply: 537
+total number of DHCP packets = 14
+total number of DNS packets = 1171

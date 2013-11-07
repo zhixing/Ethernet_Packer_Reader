@@ -174,6 +174,9 @@ public class DNSParser {
 			
 			result = readNameInDNS(packet, currentPointer, baseIndex);
 			String answerName = result.get(0);
+			if (answerName.length() == 0){ // For SOA
+				answerName = "<Root>";
+			}
 			currentPointer = Integer.parseInt(result.get(1));
 			
 			queryType = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);

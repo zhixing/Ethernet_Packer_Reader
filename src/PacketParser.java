@@ -29,9 +29,6 @@ public class PacketParser {
 		
 	final static int ETHERNET_FRAME_MIN_SIZE = 18;
 	
-	static int counta = 0;
-	static int countb = 0;
-	
 	static int IP = 0;
 	static int ARP = 0;
 	static int ICMP = 0;
@@ -52,8 +49,7 @@ public class PacketParser {
 		System.out.println("total number of Ping packets = " + (ICMP_Ping_Request + ICMP_Ping_Reply) + " Request: " + ICMP_Ping_Request + " Reply: " + ICMP_Ping_Reply);
 		System.out.println("total number of DHCP packets = " + DHCP);
 		System.out.println("total number of DNS packets = " + DNS);
-		System.out.println("total number of packets: " + count);
-		System.out.println(counta + " " + countb);
+		//System.out.println("total number of packets: " + count);
 	}
 	
 	// ----- First Layer: Ethernet  ---
@@ -143,14 +139,6 @@ public class PacketParser {
 		int baseIndex = OFFSET_IN_ETHERNET_FRAME + IHL * 4;
 		int sourcePortNumber = packet.get(baseIndex) * 256 + packet.get(baseIndex + 1); // 34 35
 		int destinationPortNumber = packet.get(baseIndex + 2) * 256 + packet.get(baseIndex + 3); // 36 37
-		
-		if (sourcePortNumber == 53){
-			counta++;
-		}
-		
-		if (destinationPortNumber == 53){
-			countb++;
-		}
 		
 		if (!findMatchedPortNumber(sourcePortNumber)){
 			findMatchedPortNumber(destinationPortNumber);
