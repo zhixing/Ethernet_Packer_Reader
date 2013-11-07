@@ -20,6 +20,12 @@ public class DNSParser {
 	final static int TYPE_DHCP = 0x06;
 	final static int TYPE_DNS = 0;
 	
+	final static int TYPE_A = 1; 
+	final static int TYPE_NS = 2; 
+	final static int TYPE_CNAME = 5; 
+	final static int TYPE_SOA = 6;
+	final static int TYPE_PTR = 12; 
+	
 	final static int OFFSET_IN_ETHERNET_FRAME = 14;
 	
 	// Port Numbers in Application Layer:
@@ -116,16 +122,119 @@ public class DNSParser {
 		// MAC + IP + UPD
 		int baseIndex = OFFSET_IN_ETHERNET_FRAME + IHL * 4 + 8;
 		int flags = packet.get(baseIndex + 2);
-		// Take the first bit:
+		// Take the first bit. 0: Query. 1: Response
 		int isResponse = (flags >> 7);
 		if (isResponse == 1){
 			int transactionID = packet.get(baseIndex) * 256 + packet.get(baseIndex + 1);
+			// Un-comment the following line to count the distinc number of transactions:
 			//if (!transactionIDs.contains(transactionID)){
 				transactionIDs.add(transactionID);
 			//}
+			processTransaction(packet, baseIndex, transactionID);
 		}
 	}
 	
+	public static void processTransaction(ArrayList<Integer> packet, int baseIndex, int transactionID){
+		
+		ArrayList<String> result = readNameInDNS(packet, baseIndex + 12 - 1, baseIndex);
+		String name = result.get(0);
+		int currentPointer = Integer.parseInt(result.get(1));
+		
+		int queryType = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);
+		int queryClass = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);
+		int answerCount = (packet.get(baseIndex + 6) * 256 + packet.get(baseIndex + 7));
+		
+		if (queryType != TYPE_A) return;
+
+		System.out.println("\n------------------DNS Transaction------------------------");
+		System.out.println("transaction_id = " + Integer.toHexString(transactionID));
+		System.out.println("Questions = " + (packet.get(baseIndex + 4) * 256 + packet.get(baseIndex + 5)));
+		System.out.println("Answer RRs = " + answerCount);
+		System.out.println("Authority RRs = " + (packet.get(baseIndex + 8) * 256 + packet.get(baseIndex + 9)));
+		System.out.println("Additional RRs = " + (packet.get(baseIndex + 10) * 256 + packet.get(baseIndex + 11)));
+		
+		System.out.println("Queries:");
+		System.out.println("\tName = " + name);
+		System.out.println("\tType = " + queryType);
+		System.out.println("\tClass = " + queryClass);
+		
+		System.out.println("Answers:");
+		
+		for (int i = 0; i < answerCount; i++){
+			result = readNameInDNS(packet, currentPointer, baseIndex);
+			String answerName = result.get(0);
+			currentPointer = Integer.parseInt(result.get(1));
+			
+			queryType = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);
+			queryClass = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);
+			int TTL = packet.get(++currentPointer) * 256 * 256 * 256 + 
+					packet.get(++currentPointer) * 256 * 256 +
+					packet.get(++currentPointer) * 256 + 
+					packet.get(++currentPointer);
+			int dataLength = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);
+			
+			System.out.println("\tName = " + answerName);
+			System.out.println("\tType = " + queryType);
+			System.out.println("\tClass = " + queryClass);
+			System.out.println("\tTime to live = " + TTL);
+			System.out.println("\tData Length = " + dataLength);
+			
+			switch (queryType){
+				case TYPE_A:{
+					String addr = 	packet.get(++currentPointer) + "." + 
+							packet.get(++currentPointer) + "." + 
+							packet.get(++currentPointer) + "." +
+							packet.get(++currentPointer);
+					System.out.println("\tAddr = " + addr);
+					break;
+				}
+				case TYPE_NS:{
+					
+					break;
+				}
+				case TYPE_CNAME:{
+					result = readNameInDNS(packet, currentPointer, baseIndex);
+					String cname = result.get(0);
+					currentPointer = Integer.parseInt(result.get(1));
+					System.out.println("\tCNAME = " + cname);
+					break;
+				}
+				case TYPE_SOA:{
+					break;
+				}
+				case TYPE_PTR:{
+					break;
+				}
+			}
+			System.out.println("\n");
+		}
+	}
+	
+	public static ArrayList<String> readNameInDNS(ArrayList<Integer> packet, int currentPointer, int baseIndex){
+		int currentLength = packet.get(++currentPointer);
+		int currentChar = 0;
+		String name = "";
+		
+		while (currentLength != 0){
+			if (currentLength >= 0xc0){
+				ArrayList<String> result = readNameInDNS(packet, (currentLength - 192) * 256 + packet.get(++currentPointer) + baseIndex - 1, baseIndex);
+				name += result.get(0);
+				break;
+			}
+			for (int i = 0; i < currentLength; i++){
+				currentChar = packet.get(++currentPointer);
+				name += (char)currentChar;
+			}
+			name += '.';
+			currentLength = packet.get(++currentPointer);
+		}
+		
+		ArrayList<String> toReturn = new ArrayList<String>();
+		toReturn.add(name);
+		toReturn.add("" + currentPointer);
+		return toReturn;
+	}
+		
 	// Main Function:
 	
 	public static void main(String[] args) {

@@ -21,13 +21,16 @@ public class PacketParser {
 	final static int TYPE_DNS = 0;
 	
 	final static int OFFSET_IN_ETHERNET_FRAME = 14;
-	
+	static int count = 0;
 	// Port Numbers in Application Layer:
 	final static int PORT_DNS = 53;
 	final static int PORT_DHCP_SERVER = 67;
 	final static int PORT_DHCP_CLIENT = 68;
 		
-	final static int ETHERNET_FRAME_MIN_SIZE = 14;
+	final static int ETHERNET_FRAME_MIN_SIZE = 18;
+	
+	static int counta = 0;
+	static int countb = 0;
 	
 	static int IP = 0;
 	static int ARP = 0;
@@ -49,6 +52,8 @@ public class PacketParser {
 		System.out.println("total number of Ping packets = " + (ICMP_Ping_Request + ICMP_Ping_Reply) + " Request: " + ICMP_Ping_Request + " Reply: " + ICMP_Ping_Reply);
 		System.out.println("total number of DHCP packets = " + DHCP);
 		System.out.println("total number of DNS packets = " + DNS);
+		System.out.println("total number of packets: " + count);
+		System.out.println(counta + " " + countb);
 	}
 	
 	// ----- First Layer: Ethernet  ---
@@ -57,6 +62,8 @@ public class PacketParser {
 		if (packet.size() < ETHERNET_FRAME_MIN_SIZE){
 			return;
 		}
+		
+		count++;
 		
 		// Ethernet Frame: 6 bytes for dst Mac, 6 bytes for src Mac, then 2 bytes for EtherType:
 		int type = packet.get(12) * 256 + packet.get(13);
@@ -137,6 +144,14 @@ public class PacketParser {
 		int sourcePortNumber = packet.get(baseIndex) * 256 + packet.get(baseIndex + 1); // 34 35
 		int destinationPortNumber = packet.get(baseIndex + 2) * 256 + packet.get(baseIndex + 3); // 36 37
 		
+		if (sourcePortNumber == 53){
+			counta++;
+		}
+		
+		if (destinationPortNumber == 53){
+			countb++;
+		}
+		
 		if (!findMatchedPortNumber(sourcePortNumber)){
 			findMatchedPortNumber(destinationPortNumber);
 		}
@@ -187,6 +202,8 @@ public class PacketParser {
 					processPacket(currentPacket);
 					currentPacket.clear();
 				}
+				
+				//if (count == 4000) break;
 				
 				// Read in everything into the packet:
 				while(scanner.hasNextInt(16)){
