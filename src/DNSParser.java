@@ -142,25 +142,36 @@ public class DNSParser {
 		
 		int queryType = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);
 		int queryClass = packet.get(++currentPointer) * 256 + packet.get(++currentPointer);
-		int answerCount = (packet.get(baseIndex + 6) * 256 + packet.get(baseIndex + 7));
 		
-		if (queryType != TYPE_A) return;
+		int answerRRsCount = (packet.get(baseIndex + 6) * 256 + packet.get(baseIndex + 7));
+		int authorityRRsCount = (packet.get(baseIndex + 8) * 256 + packet.get(baseIndex + 9));
+		int additionalRRsCount = (packet.get(baseIndex + 10) * 256 + packet.get(baseIndex + 11));
+		
+		//if (queryType != TYPE_A) return;
 
 		System.out.println("\n------------------DNS Transaction------------------------");
 		System.out.println("transaction_id = " + Integer.toHexString(transactionID));
 		System.out.println("Questions = " + (packet.get(baseIndex + 4) * 256 + packet.get(baseIndex + 5)));
-		System.out.println("Answer RRs = " + answerCount);
-		System.out.println("Authority RRs = " + (packet.get(baseIndex + 8) * 256 + packet.get(baseIndex + 9)));
-		System.out.println("Additional RRs = " + (packet.get(baseIndex + 10) * 256 + packet.get(baseIndex + 11)));
+		System.out.println("Answer RRs = " + answerRRsCount);
+		System.out.println("Authority RRs = " + authorityRRsCount);
+		System.out.println("Additional RRs = " + additionalRRsCount);
 		
 		System.out.println("Queries:");
 		System.out.println("\tName = " + name);
 		System.out.println("\tType = " + queryType);
 		System.out.println("\tClass = " + queryClass);
+	
 		
-		System.out.println("Answers:");
-		
-		for (int i = 0; i < answerCount; i++){
+		for (int i = 0; i < answerRRsCount + authorityRRsCount + additionalRRsCount; i++){
+			
+			if ( i == 0){
+				System.out.println("Answers:");
+			} else if ( i == answerRRsCount){
+				System.out.println("Authoritative nameservers:");
+			} else if ( i == answerRRsCount + authorityRRsCount){
+				System.out.println("Additional records:");
+			}
+			
 			result = readNameInDNS(packet, currentPointer, baseIndex);
 			String answerName = result.get(0);
 			currentPointer = Integer.parseInt(result.get(1));
@@ -189,7 +200,10 @@ public class DNSParser {
 					break;
 				}
 				case TYPE_NS:{
-					
+					result = readNameInDNS(packet, currentPointer, baseIndex);
+					String nameServer = result.get(0);
+					currentPointer = Integer.parseInt(result.get(1));
+					System.out.println("\tNS: " + nameServer);
 					break;
 				}
 				case TYPE_CNAME:{
@@ -200,11 +214,58 @@ public class DNSParser {
 					break;
 				}
 				case TYPE_SOA:{
+					result = readNameInDNS(packet, currentPointer, baseIndex);
+					String pName = result.get(0);
+					currentPointer = Integer.parseInt(result.get(1));
+					System.out.println("\tPrimary Name Server = " + pName);
+					
+					result = readNameInDNS(packet, currentPointer, baseIndex);
+					String rMail = result.get(0);
+					currentPointer = Integer.parseInt(result.get(1));
+					System.out.println("\tResponsible Authority's Mailbox = " + rMail);
+					
+					int serialNumber = packet.get(++currentPointer) * 256 * 256 * 256 + 
+										packet.get(++currentPointer) * 256 * 256 +
+										packet.get(++currentPointer) * 256 + 
+										packet.get(++currentPointer);
+					System.out.println("\tSerial Number = " + serialNumber);
+					
+					int refresh = packet.get(++currentPointer) * 256 * 256 * 256 + 
+							packet.get(++currentPointer) * 256 * 256 +
+							packet.get(++currentPointer) * 256 + 
+							packet.get(++currentPointer);
+					System.out.println("\tRefresh Interval = " + refresh);
+					
+					int retry = packet.get(++currentPointer) * 256 * 256 * 256 + 
+							packet.get(++currentPointer) * 256 * 256 +
+							packet.get(++currentPointer) * 256 + 
+							packet.get(++currentPointer);
+					System.out.println("\tRetry Interval = " + retry);
+					
+					int expiry = packet.get(++currentPointer) * 256 * 256 * 256 + 
+							packet.get(++currentPointer) * 256 * 256 +
+							packet.get(++currentPointer) * 256 + 
+							packet.get(++currentPointer);
+					System.out.println("\tExpiration Limit = " + expiry);
+					
+					int minTTL = packet.get(++currentPointer) * 256 * 256 * 256 + 
+							packet.get(++currentPointer) * 256 * 256 +
+							packet.get(++currentPointer) * 256 + 
+							packet.get(++currentPointer);
+					System.out.println("\tMin TTL = " + minTTL);
 					break;
 				}
 				case TYPE_PTR:{
+					result = readNameInDNS(packet, currentPointer, baseIndex);
+					String pName = result.get(0);
+					currentPointer = Integer.parseInt(result.get(1));
+					System.out.println("\tPTR Domain Name = " + pName);
 					break;
 				}
+				default:
+					System.out.println("\tThis type is not supported");
+					currentPointer += dataLength;
+					break;
 			}
 			System.out.println("\n");
 		}
@@ -239,7 +300,7 @@ public class DNSParser {
 	
 	public static void main(String[] args) {
 		
-		if (args.length != 1){
+		if (args.length < 1){
 			System.out.println("Usage: java PacketParser fileName");
 			System.exit(0);
 		}
