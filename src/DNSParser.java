@@ -164,7 +164,7 @@ public class DNSParser {
 		
 		for (int i = 0; i < answerRRsCount + authorityRRsCount + additionalRRsCount; i++){
 			
-			if ( i == 0){
+			if ( i == 0 && answerRRsCount != 0){
 				System.out.println("Answers:");
 			} else if ( i == answerRRsCount){
 				System.out.println("Authoritative nameservers:");
