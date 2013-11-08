@@ -9,7 +9,7 @@ Queries:
 	Name = local.
 	Type = 6
 	Class = 1
-Authoritative nameservers:
+Answers:
 	Name = <Root>
 	Type = 6
 	Class = 1
@@ -35,7 +35,7 @@ Queries:
 	Name = local.
 	Type = 6
 	Class = 1
-Authoritative nameservers:
+Answers:
 	Name = <Root>
 	Type = 6
 	Class = 1
@@ -131,7 +131,7 @@ Queries:
 	Name = local.
 	Type = 6
 	Class = 1
-Authoritative nameservers:
+Answers:
 	Name = <Root>
 	Type = 6
 	Class = 1
@@ -509,7 +509,7 @@ Queries:
 	Name = local.
 	Type = 6
 	Class = 1
-Authoritative nameservers:
+Answers:
 	Name = <Root>
 	Type = 6
 	Class = 1
@@ -535,7 +535,7 @@ Queries:
 	Name = local.
 	Type = 6
 	Class = 1
-Authoritative nameservers:
+Answers:
 	Name = <Root>
 	Type = 6
 	Class = 1
