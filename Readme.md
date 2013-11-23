@@ -14,8 +14,8 @@ Matric Number: A0091726B
 
 - Extra Features:
 	- In question 1, able to analyze ping request and ping reply packets, and print their number.
-	- In question 2, able to analyze and printout responses of other queries including 'A' queries.
-	- In question 2, albe to analyze and printout details of RRs of other types, including:
+	- In question 2, able to analyze and print out responses of other queries including 'A' queries.
+	- In question 2, albe to analyze and print out details of RRs of other types, including:
 		- A Records
 		- NS Records
 		- CNAME Records
@@ -40,11 +40,11 @@ Matric Number: A0091726B
 
 - Counting logic in question B:
 	- Assume each packet only has one question, multiple RRs.
-	- Didn't count DNS in UDP
+	- Didn't count DNS in TCP
 	- The MDNS packets are ignored.
 
 - Development Platform:
-	- Max OS X 10.8.5 Mountain Lion
+	- Max OS X 10.9
 	- java version "1.7.0_40"
 	- Java(TM) SE Runtime Environment (build 1.7.0_40-b43)
 	- Java HotSpot(TM) 64-Bit Server VM (build 24.0-b56, mixed mode)
