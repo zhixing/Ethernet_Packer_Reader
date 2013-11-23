@@ -1,7 +1,4 @@
-CS3103 Programming Assignment 2
-
-Name: Yang Zhixing
-Matric Number: A0091726B
+@Author: Yang Zhixing
 
 - How to compile:
 	- Go to the src folder:
